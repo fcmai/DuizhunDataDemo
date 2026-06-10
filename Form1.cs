@@ -146,15 +146,15 @@ namespace DuizhunDataDemo
         }
 
         // 【核心工具函数】从ListBox生成符合规范的CSV内容
-        private string GenerateCsvFromListBox(ListBox listBox)
+        private string GenerateCsvFromListBox(ListBox listBoxLog)
         {
             StringBuilder csvBuilder = new StringBuilder();
 
             // 遍历ListBox所有项
-            foreach (var item in listBox.Items)
+            foreach (var item in listBoxLog.Items)
             {
                 // 提取项的显示文本（兼容手动添加的字符串/数据绑定对象）
-                string itemText = listBox.GetItemText(item);
+                string itemText = listBoxLog.GetItemText(item);
 
                 // 处理CSV特殊字符转义，避免格式错乱
                 string escapedText = EscapeCsvField(itemText);
@@ -202,15 +202,13 @@ namespace DuizhunDataDemo
                     return;
                 }
 
-                //当前旋转弧度
-                rad += _totalAngle * Math.PI / 180;
-                //实时公转晶圆中心点
-
-
-
-                double currWaferX = _rotCenterX + r_pianxin * Math.Cos(rad);
-                double currWaferY = _rotCenterY + r_pianxin * Math.Sin(rad);
-
+          
+                // ========== 修复后代码 ==========
+                // 当前总角度 转 弧度（只计算，不全局累加）
+                double currentRad = _totalAngle * Math.PI / 180.0;
+                // 晶圆中心绕旋转中心公转（标准极坐标，适配屏幕坐标系）
+                double currWaferX = _rotCenterX + r_pianxin * Math.Cos(currentRad);
+                double currWaferY = _rotCenterY + r_pianxin * Math.Sin(currentRad);
                 //离屏绘图
                 using (Graphics g = Graphics.FromImage(_bmp))
                 {
@@ -316,32 +314,39 @@ namespace DuizhunDataDemo
                             (float)_waferR * 2);
                     }
                     #endregion 44
+                
 
-
-                    #region 45.绘制8寸晶圆标准缺口 Notch (V型，SEMI标准)
+                    #region 45.绘制8寸晶圆标准缺口 Notch (修复角度+坐标系)
                     // ===================== 8寸晶圆 Notch 标准尺寸 =====================
-                    float notchDepth = 2.0f;         // 缺口深度 1.0mm (标准)
-                    float notchWidth = 5f;         // 缺口开口宽度 2.5mm (标准)
-                    float notchAngle = 90f;          // 缺口角度 90°
+                    float notchDepth = 4.0f;         // 缺口深度
+                    float notchWidth = 10f;          // 缺口开口宽度
 
-                    // 缺口中心点朝向：正下方（0°=右，90°=下，标准缺口方向）
-                    float notchDirectionAngle = 90f;
+                    // 1. 缺口基础偏角(控件输入 角度°) + 晶圆整体旋转角度
+                    float notchBaseAngleDeg = (float)nudQuekouAngle.Value;
+                    // 最终缺口朝向总角度（角度制）
+                    float totalNotchAngleDeg = notchBaseAngleDeg + (float)_totalAngle;
+                    // 转为弧度，用于三角函数计算
+                    float totalNotchAngleRad = totalNotchAngleDeg * (float)Math.PI / 180.0f;
 
-                    // 计算缺口三个关键点（V型）
-                    PointF notchTopLeft = GetNotchPoint(currX, currY, (float)_waferR, notchDirectionAngle, -notchWidth / 2);
-                    PointF notchTopRight = GetNotchPoint(currX, currY, (float)_waferR, notchDirectionAngle, notchWidth / 2);
+                    // 2. 修复三角函数：屏幕Y向下，使用标准极坐标公式
+                    // 极坐标：x = r*cosθ , y = r*sinθ
+                    PointF notchTopLeft = GetNotchPoint(currX, currY, (float)_waferR, totalNotchAngleRad, -notchWidth / 2);
+                    PointF notchTopRight = GetNotchPoint(currX, currY, (float)_waferR, totalNotchAngleRad, notchWidth / 2);
+
+                    // 缺口底部顶点
                     PointF notchBottom = new PointF(
-                        (float)(currX + (float)( _waferR - notchDepth) * Math.Sin(notchDirectionAngle * Math.PI / 180)),
-                        (float)(currY + (float)( _waferR - notchDepth) * Math.Cos(notchDirectionAngle * Math.PI / 180))
+                        (float)(currX + (_waferR - notchDepth) * Math.Cos(totalNotchAngleRad)),
+                        (float)(currY + (_waferR - notchDepth) * Math.Sin(totalNotchAngleRad))
                     );
 
-                    // 用蓝色实线画缺口（与晶圆边框一致）
+                    // 用蓝色实线画缺口
                     using (Pen penNotch = new Pen(Color.Blue, 1))
                     {
                         g.DrawLine(penNotch, notchTopLeft, notchBottom);
                         g.DrawLine(penNotch, notchBottom, notchTopRight);
                     }
                     #endregion
+
 
                     //实时晶圆中心蓝圆点
                     using (SolidBrush brBlue = new SolidBrush(Color.Blue))
@@ -363,26 +368,53 @@ namespace DuizhunDataDemo
                     }
                     #endregion
                 }
-                pictureBox1.Refresh();
 
                 //求交并打印交点
                 PointF[] pts = GetLineCircleIntersect(
                     _lineLeft.X, _lineLeft.Y, _lineRight.X, _lineRight.Y,
                     currWaferX, currWaferY, _waferR);
 
+                // 求交点
+                PointF[] points = GetRotatedWaferIntersectionPoints(
+                    currWaferX, currWaferY, 0, _rotCenterX, _rotCenterY, _totalAngle, _waferR,
+                    _lineLeft.X, _lineLeft.Y, _lineRight.X, _lineRight.Y);
+
                 foreach (var p in pts)
                 {
                     Trace.WriteLine($"总转角:交点 (X,Y),{_totalAngle:F4},{p.X:F4},{p.Y:F4}");
                     lstLog.Items.Add($"总转角:交点 (X,Y),{_totalAngle:F4},{p.X:F4},{p.Y:F4}");
                 }
+                // 绘制计算出的交点：红色实心小圆，标记校验
+                using (Graphics g = Graphics.FromImage(_bmp))
+                using (SolidBrush brushPt = new SolidBrush(Color.Red))
+                {
+                    // 1. 绘制圆与线段交点
+                    foreach (var p in pts)
+                    {
+                        g.FillEllipse(brushPt, p.X - 4, p.Y - 4, 8, 8);
+                    }
+                    // 2. 绘制缺口与线段交点
+                    foreach (var p in points)
+                    {
+                        g.FillEllipse(brushPt, p.X - 3, p.Y - 3, 6, 6);
+                    }
+                }
+                pictureBox1.Refresh();
+
+               
             }
         }
-        // 计算缺口开口点坐标（用于绘制标准Notch）
-        private PointF GetNotchPoint(float centerX, float centerY, float radius, float angleDeg, float offsetDeg)
+     
+        // 计算缺口开口点坐标（修复屏幕坐标系）
+        private PointF GetNotchPoint(float centerX, float centerY, float radius, float angleRad, float offsetDeg)
         {
-            double rad = (angleDeg + offsetDeg) * Math.PI / 180;
-            float x = centerX + (float)(radius * Math.Sin(rad));
-            float y = centerY + (float)(radius * Math.Cos(rad));
+            // 偏移角度 转 弧度
+            double offsetRad = offsetDeg * Math.PI / 180.0;
+            double finalRad = angleRad + offsetRad;
+
+            // 标准极坐标（适配WinForm屏幕 Y轴向下）
+            float x = centerX + (float)(radius * Math.Cos(finalRad));
+            float y = centerY + (float)(radius * Math.Sin(finalRad));
             return new PointF(x, y);
         }
         /// <summary>
@@ -473,16 +505,125 @@ namespace DuizhunDataDemo
             }
         }
 
-        /// <summary>线段与圆交点</summary>
+
+        /// <summary>
+        /// 求晶圆绕(X0,Y0)旋转alpha2角度后，与线段的所有交点
+        /// </summary>
+        private PointF[] GetRotatedWaferIntersectionPoints(
+            double X1, double Y1, double alpha0,
+            double X0, double Y0, double alpha2,
+            double r,
+            double x3, double y3, double x4, double y4)
+        {
+            List<PointF> res = new List<PointF>();
+
+            // alpha2 是角度，转弧度
+            double alpha2Rad = alpha2 * Math.PI / 180.0;
+
+            // 1. 旋转后晶圆新中心坐标
+            double cx = X0 + (X1 - X0) * Math.Cos(alpha2Rad) - (Y1 - Y0) * Math.Sin(alpha2Rad);
+            double cy = Y0 + (X1 - X0) * Math.Sin(alpha2Rad) + (Y1 - Y0) * Math.Cos(alpha2Rad);
+
+            // 2. 缺口最终角度（弧度）
+            double notchAngle = alpha0 + alpha2Rad;
+
+            // 3. 缺口尺寸
+            double notchWidth = 2.5;
+            double notchDepth = 1.0;
+
+            // 4. 线段与晶圆外圆交点
+            var circlePoints = GetLineCircleIntersect(x3, y3, x4, y4, cx, cy, r);
+            res.AddRange(circlePoints);
+
+            // 5. 缺口两条边端点计算
+            double w = notchWidth / 2.0;
+            double nx1 = cx + r * Math.Cos(notchAngle - w / r);
+            double ny1 = cy + r * Math.Sin(notchAngle - w / r);
+            double nx2 = cx + r * Math.Cos(notchAngle + w / r);
+            double ny2 = cy + r * Math.Sin(notchAngle + w / r);
+            double nx3 = cx + (r - notchDepth) * Math.Cos(notchAngle);
+            double ny3 = cy + (r - notchDepth) * Math.Sin(notchAngle);
+
+            // 6. 线段与缺口边交点
+            var p1 = LineLineIntersect(x3, y3, x4, y4, nx1, ny1, nx3, ny3);
+            var p2 = LineLineIntersect(x3, y3, x4, y4, nx2, ny2, nx3, ny3);
+
+            if (p1.HasValue) res.Add(p1.Value);
+            if (p2.HasValue) res.Add(p2.Value);
+
+            // 去重返回
+            return res.Distinct().ToArray();
+        }
+        /// <summary>
+        /// 求晶圆绕(X0,Y0)旋转alpha2角度后，与线段(x3,y3)-(x4,y4)的所有交点（大圆+缺口）
+        /// </summary>
+        /// <param name="X1">晶圆原始中心X</param>
+        /// <param name="Y1">晶圆原始中心Y</param>
+        /// <param name="alpha0">缺口初始偏角（弧度）</param>
+        /// <param name="X0">旋转中心X</param>
+        /// <param name="Y0">旋转中心Y</param>
+        /// <param name="alpha2">旋转角度（弧度）</param>
+        /// <param name="r">晶圆半径</param>
+        /// <param name="x3">线段起点X</param>
+        /// <param name="y3">线段起点Y</param>
+        /// <param name="x4">线段终点X</param>
+        /// <param name="y4">线段终点Y</param>
+        /// <returns>所有交点</returns>
+        private PointF[] GetRotatedWaferIntersectionPointsOLd(
+            double X1, double Y1, double alpha0,
+            double X0, double Y0, double alpha2,
+            double r,
+            double x3, double y3, double x4, double y4)
+        {
+            List<PointF> res = new List<PointF>();
+
+            // ===================== 1. 旋转后：晶圆新中心坐标 =====================
+            double cx = X0 + (X1 - X0) * Math.Cos(alpha2) - (Y1 - Y0) * Math.Sin(alpha2);
+            double cy = Y0 + (X1 - X0) * Math.Sin(alpha2) + (Y1 - Y0) * Math.Cos(alpha2);
+
+            // ===================== 2. 旋转后：缺口最终角度 =====================
+            double notchAngle = alpha0 + alpha2;
+
+            // ===================== 3. 缺口尺寸（8寸标准） =====================
+            double notchWidth = 2.5;   // 开口
+            double notchDepth = 1.0;   // 深度
+
+            // ===================== 4. 求线段与【旋转后大圆】的交点 =====================
+            var circlePoints = GetLineCircleIntersect(x3, y3, x4, y4, cx, cy, r);
+            res.AddRange(circlePoints);
+
+            // ===================== 5. 计算【旋转后缺口两条边】坐标 =====================
+            double w = notchWidth / 2.0;
+
+            double nx1 = cx + r * Math.Sin(notchAngle - w / r);
+            double ny1 = cy + r * Math.Cos(notchAngle - w / r);
+            double nx2 = cx + r * Math.Sin(notchAngle + w / r);
+            double ny2 = cy + r * Math.Cos(notchAngle + w / r);
+            double nx3 = cx + (r - notchDepth) * Math.Sin(notchAngle);
+            double ny3 = cy + (r - notchDepth) * Math.Cos(notchAngle);
+
+            // ===================== 6. 求线段与【缺口两边】的交点 =====================
+            var p1 = LineLineIntersect(x3, y3, x4, y4, nx1, ny1, nx3, ny3);
+            var p2 = LineLineIntersect(x3, y3, x4, y4, nx2, ny2, nx3, ny3);
+
+            if (p1.HasValue) res.Add(p1.Value);
+            if (p2.HasValue) res.Add(p2.Value);
+
+            // ===================== 7. 去重 & 返回 =====================
+            return res.Distinct().ToArray();
+        }
+
+        // 线段 ↔ 圆 求交点（你原来的函数）
         private PointF[] GetLineCircleIntersect(double x1, double y1, double x2, double y2, double ox, double oy, double r)
         {
-            List<PointF> res = new();
+            List<PointF> res = new List<PointF>();
             double dx = x2 - x1;
             double dy = y2 - y1;
             double A = dx * dx + dy * dy;
             double B = 2 * (dx * (x1 - ox) + dy * (y1 - oy));
             double C = (x1 - ox) * (x1 - ox) + (y1 - oy) * (y1 - oy) - r * r;
             double delta = B * B - 4 * A * C;
+
             if (delta < 0) return Array.Empty<PointF>();
             double sq = Math.Sqrt(delta);
             double t1 = (-B - sq) / (2 * A);
@@ -492,8 +633,66 @@ namespace DuizhunDataDemo
                 res.Add(new PointF((float)(x1 + t1 * dx), (float)(y1 + t1 * dy)));
             if (t2 >= 0 && t2 <= 1 && Math.Abs(t1 - t2) > 1e-6)
                 res.Add(new PointF((float)(x1 + t2 * dx), (float)(y1 + t2 * dy)));
+
             return res.ToArray();
         }
+
+        // 线段 ↔ 线段 求交点
+        private PointF? LineLineIntersectOLD带延长线(double x1, double y1, double x2, double y2,
+                                          double x3, double y3, double x4, double y4)
+        {
+            double denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+            if (Math.Abs(denom) < 1e-9) return null;
+
+            double ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom;
+            double ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denom;
+
+            if (ua >= 0 && ua <= 1 && ub >= 0 && ub <= 1)
+            {
+                return new PointF((float)(x1 + ua * (x2 - x1)), (float)(y1 + ua * (y2 - y1)));
+            }
+            return null;
+        }
+        // 线段 ↔ 线段 求交点（优化精度，仅返回两条线段范围内的交点）
+        private PointF? LineLineIntersect(double x1, double y1, double x2, double y2,
+                                          double x3, double y3, double x4, double y4)
+        {
+            double denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+            // 两直线平行，无交点
+            if (Math.Abs(denom) < 1e-6)
+                return null;
+
+            double ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom;
+            double ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denom;
+
+            // 严格限制：交点必须同时在【两条原始线段】上，排除延长线
+            if (ua >= 0 && ua <= 1 && ub >= 0 && ub <= 1)
+            {
+                return new PointF((float)(x1 + ua * (x2 - x1)), (float)(y1 + ua * (y2 - y1)));
+            }
+            return null;
+        }
+        /// <summary>线段与圆交点</summary>
+        //private PointF[] GetLineCircleIntersect(double x1, double y1, double x2, double y2, double ox, double oy, double r)
+        //{
+        //    List<PointF> res = new();
+        //    double dx = x2 - x1;
+        //    double dy = y2 - y1;
+        //    double A = dx * dx + dy * dy;
+        //    double B = 2 * (dx * (x1 - ox) + dy * (y1 - oy));
+        //    double C = (x1 - ox) * (x1 - ox) + (y1 - oy) * (y1 - oy) - r * r;
+        //    double delta = B * B - 4 * A * C;
+        //    if (delta < 0) return Array.Empty<PointF>();
+        //    double sq = Math.Sqrt(delta);
+        //    double t1 = (-B - sq) / (2 * A);
+        //    double t2 = (-B + sq) / (2 * A);
+
+        //    if (t1 >= 0 && t1 <= 1)
+        //        res.Add(new PointF((float)(x1 + t1 * dx), (float)(y1 + t1 * dy)));
+        //    if (t2 >= 0 && t2 <= 1 && Math.Abs(t1 - t2) > 1e-6)
+        //        res.Add(new PointF((float)(x1 + t2 * dx), (float)(y1 + t2 * dy)));
+        //    return res.ToArray();
+        //}
 
         private PointF[] GetLineCircleIntersect2(double x1, double y1, double x2, double y2, double ox, double oy, double r)
         {
