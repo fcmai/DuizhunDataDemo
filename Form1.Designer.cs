@@ -32,6 +32,8 @@
             comboBox1 = new ComboBox();
             tab1 = new TabControl();
             tabPage1 = new TabPage();
+            panel13 = new Panel();
+            lblAngles = new Label();
             panel12 = new Panel();
             checkBox2 = new CheckBox();
             numericUpDown3 = new NumericUpDown();
@@ -82,8 +84,6 @@
             label1 = new Label();
             tabPage2 = new TabPage();
             btnClose = new Button();
-            panel13 = new Panel();
-            lblAngles = new Label();
             groupBox1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             groupBox2.SuspendLayout();
@@ -93,6 +93,7 @@
             splitContainer1.SuspendLayout();
             tab1.SuspendLayout();
             tabPage1.SuspendLayout();
+            panel13.SuspendLayout();
             panel12.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)numericUpDown3).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDown4).BeginInit();
@@ -123,7 +124,6 @@
             panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)nudCy).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudCx).BeginInit();
-            panel13.SuspendLayout();
             SuspendLayout();
             // 
             // groupBox1
@@ -270,6 +270,24 @@
             tabPage1.TabIndex = 0;
             tabPage1.Text = "参数设置";
             tabPage1.UseVisualStyleBackColor = true;
+            // 
+            // panel13
+            // 
+            panel13.Controls.Add(lblAngles);
+            panel13.Location = new Point(646, 184);
+            panel13.Margin = new Padding(3, 4, 3, 4);
+            panel13.Name = "panel13";
+            panel13.Size = new Size(287, 71);
+            panel13.TabIndex = 14;
+            // 
+            // lblAngles
+            // 
+            lblAngles.AutoSize = true;
+            lblAngles.Location = new Point(8, 11);
+            lblAngles.Name = "lblAngles";
+            lblAngles.Size = new Size(163, 20);
+            lblAngles.TabIndex = 1;
+            lblAngles.Text = "底盘转角： 缺口转角：";
             // 
             // panel12
             // 
@@ -676,7 +694,7 @@
             nud旋转总角度.Name = "nud旋转总角度";
             nud旋转总角度.Size = new Size(84, 27);
             nud旋转总角度.TabIndex = 2;
-            nud旋转总角度.Value = new decimal(new int[] { 720, 0, 0, 0 });
+            nud旋转总角度.Value = new decimal(new int[] { 7200, 0, 0, 0 });
             // 
             // label11
             // 
@@ -707,7 +725,7 @@
             nudOmega.Name = "nudOmega";
             nudOmega.Size = new Size(72, 27);
             nudOmega.TabIndex = 2;
-            nudOmega.Value = new decimal(new int[] { 100, 0, 0, 0 });
+            nudOmega.Value = new decimal(new int[] { 20, 0, 0, 0 });
             // 
             // label8
             // 
@@ -815,24 +833,6 @@
             btnClose.UseVisualStyleBackColor = true;
             btnClose.Click += btnClose_Click;
             // 
-            // panel13
-            // 
-            panel13.Controls.Add(lblAngles);
-            panel13.Location = new Point(646, 184);
-            panel13.Margin = new Padding(3, 4, 3, 4);
-            panel13.Name = "panel13";
-            panel13.Size = new Size(287, 71);
-            panel13.TabIndex = 14;
-            // 
-            // lblAngles
-            // 
-            lblAngles.AutoSize = true;
-            lblAngles.Location = new Point(8, 11);
-            lblAngles.Name = "lblAngles";
-            lblAngles.Size = new Size(163, 20);
-            lblAngles.TabIndex = 1;
-            lblAngles.Text = "底盘转角： 缺口转角：";
-            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(9F, 20F);
@@ -857,6 +857,8 @@
             splitContainer1.ResumeLayout(false);
             tab1.ResumeLayout(false);
             tabPage1.ResumeLayout(false);
+            panel13.ResumeLayout(false);
+            panel13.PerformLayout();
             panel12.ResumeLayout(false);
             panel12.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)numericUpDown3).EndInit();
@@ -899,8 +901,6 @@
             panel1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)nudCy).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudCx).EndInit();
-            panel13.ResumeLayout(false);
-            panel13.PerformLayout();
             ResumeLayout(false);
         }
 
