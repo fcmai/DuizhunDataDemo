@@ -82,6 +82,8 @@
             label1 = new Label();
             tabPage2 = new TabPage();
             btnClose = new Button();
+            panel13 = new Panel();
+            lblAngles = new Label();
             groupBox1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             groupBox2.SuspendLayout();
@@ -121,6 +123,7 @@
             panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)nudCy).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudCx).BeginInit();
+            panel13.SuspendLayout();
             SuspendLayout();
             // 
             // groupBox1
@@ -228,7 +231,7 @@
             comboBox1.FormattingEnabled = true;
             comboBox1.Items.AddRange(new object[] { "方案1 - 8寸- 100", "方案2 - 6寸- 75" });
             comboBox1.Location = new Point(15, 29);
-            comboBox1.Margin = new Padding(4, 4, 4, 4);
+            comboBox1.Margin = new Padding(4);
             comboBox1.Name = "comboBox1";
             comboBox1.Size = new Size(116, 28);
             comboBox1.TabIndex = 8;
@@ -238,7 +241,7 @@
             tab1.Controls.Add(tabPage1);
             tab1.Controls.Add(tabPage2);
             tab1.Location = new Point(27, 12);
-            tab1.Margin = new Padding(4, 4, 4, 4);
+            tab1.Margin = new Padding(4);
             tab1.Name = "tab1";
             tab1.SelectedIndex = 0;
             tab1.Size = new Size(1039, 315);
@@ -246,6 +249,7 @@
             // 
             // tabPage1
             // 
+            tabPage1.Controls.Add(panel13);
             tabPage1.Controls.Add(panel12);
             tabPage1.Controls.Add(panel7);
             tabPage1.Controls.Add(panel5);
@@ -259,9 +263,9 @@
             tabPage1.Controls.Add(panel6);
             tabPage1.Controls.Add(panel1);
             tabPage1.Location = new Point(4, 29);
-            tabPage1.Margin = new Padding(4, 4, 4, 4);
+            tabPage1.Margin = new Padding(4);
             tabPage1.Name = "tabPage1";
-            tabPage1.Padding = new Padding(4, 4, 4, 4);
+            tabPage1.Padding = new Padding(4);
             tabPage1.Size = new Size(1031, 282);
             tabPage1.TabIndex = 0;
             tabPage1.Text = "参数设置";
@@ -286,7 +290,7 @@
             checkBox2.AutoSize = true;
             checkBox2.ForeColor = Color.Blue;
             checkBox2.Location = new Point(202, 33);
-            checkBox2.Margin = new Padding(4, 4, 4, 4);
+            checkBox2.Margin = new Padding(4);
             checkBox2.Name = "checkBox2";
             checkBox2.Size = new Size(61, 24);
             checkBox2.TabIndex = 3;
@@ -353,7 +357,7 @@
             checkBox1.AutoSize = true;
             checkBox1.ForeColor = Color.Blue;
             checkBox1.Location = new Point(202, 33);
-            checkBox1.Margin = new Padding(4, 4, 4, 4);
+            checkBox1.Margin = new Padding(4);
             checkBox1.Name = "checkBox1";
             checkBox1.Size = new Size(61, 24);
             checkBox1.TabIndex = 3;
@@ -527,7 +531,7 @@
             chk.AutoSize = true;
             chk.ForeColor = Color.Blue;
             chk.Location = new Point(202, 33);
-            chk.Margin = new Padding(4, 4, 4, 4);
+            chk.Margin = new Padding(4);
             chk.Name = "chk";
             chk.Size = new Size(61, 24);
             chk.TabIndex = 3;
@@ -792,10 +796,10 @@
             // tabPage2
             // 
             tabPage2.Location = new Point(4, 29);
-            tabPage2.Margin = new Padding(4, 4, 4, 4);
+            tabPage2.Margin = new Padding(4);
             tabPage2.Name = "tabPage2";
-            tabPage2.Padding = new Padding(4, 4, 4, 4);
-            tabPage2.Size = new Size(1031, 239);
+            tabPage2.Padding = new Padding(4);
+            tabPage2.Size = new Size(1031, 282);
             tabPage2.TabIndex = 1;
             tabPage2.Text = "操作说明";
             tabPage2.UseVisualStyleBackColor = true;
@@ -810,6 +814,24 @@
             btnClose.Text = "退出";
             btnClose.UseVisualStyleBackColor = true;
             btnClose.Click += btnClose_Click;
+            // 
+            // panel13
+            // 
+            panel13.Controls.Add(lblAngles);
+            panel13.Location = new Point(646, 184);
+            panel13.Margin = new Padding(3, 4, 3, 4);
+            panel13.Name = "panel13";
+            panel13.Size = new Size(287, 71);
+            panel13.TabIndex = 14;
+            // 
+            // lblAngles
+            // 
+            lblAngles.AutoSize = true;
+            lblAngles.Location = new Point(8, 11);
+            lblAngles.Name = "lblAngles";
+            lblAngles.Size = new Size(163, 20);
+            lblAngles.TabIndex = 1;
+            lblAngles.Text = "底盘转角： 缺口转角：";
             // 
             // Form1
             // 
@@ -877,6 +899,8 @@
             panel1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)nudCy).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudCx).EndInit();
+            panel13.ResumeLayout(false);
+            panel13.PerformLayout();
             ResumeLayout(false);
         }
 
@@ -943,5 +967,7 @@
         private Label label12;
         private NumericUpDown nudQuekouAngle;
         private Label label13;
+        private Panel panel13;
+        private Label lblAngles;
     }
 }

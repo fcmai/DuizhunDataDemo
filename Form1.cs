@@ -29,6 +29,10 @@ namespace DuizhunDataDemo
         //线阵端点
         private PointF _lineLeft = new PointF(80, 320);
         private PointF _lineRight = new PointF(420, 320);
+        
+        // ========= 新增：全局统一缺口尺寸 =========
+        private readonly float _notchDepth = 4.0f;
+        private readonly float _notchWidth = 10f;
 
         //标尺参数
         private bool _showRuler = true;      //是否显示标尺
@@ -188,7 +192,7 @@ namespace DuizhunDataDemo
             return field;
         }
 
-
+        #region 【核心定时器事件】每50ms更新一次晶圆位置并重绘
         private void TimerTick(object sender, EventArgs e)
         {
             lock (_lock)
@@ -196,16 +200,16 @@ namespace DuizhunDataDemo
                 //单步转角
                 double stepAngle = _omega * 50 / 1000d;
                 _totalAngle += stepAngle;
-                if (_totalAngle >= maxJiaodu旋转)
+                if (_totalAngle > maxJiaodu旋转)
                 {
                     _timer.Enabled = false;
                     return;
                 }
 
-          
+
                 // ========== 修复后代码 ==========
-                // 当前总角度 转 弧度（只计算，不全局累加）
-                double currentRad = _totalAngle * Math.PI / 180.0;
+                // 初始夹角 + 累计旋转角度，从界面设置的起点开始旋转
+                double currentRad = rad + _totalAngle * Math.PI / 180.0;
                 // 晶圆中心绕旋转中心公转（标准极坐标，适配屏幕坐标系）
                 double currWaferX = _rotCenterX + r_pianxin * Math.Cos(currentRad);
                 double currWaferY = _rotCenterY + r_pianxin * Math.Sin(currentRad);
@@ -221,8 +225,8 @@ namespace DuizhunDataDemo
                         DrawRuler(g);
                     }
                     #endregion
- 
-               
+
+
                     #region 1.绘制基准大圆(灰色填充 + 黑色边框)
                     using (SolidBrush brushBig = new SolidBrush(Color.LightGray))
                     using (Pen penBig = new Pen(Color.Black, 1))
@@ -236,7 +240,7 @@ namespace DuizhunDataDemo
 
                         // 再画边框（可选）
                         // 自定义：短划线 5px，空 3px，点 2px，空 3px
-                        penBig.DashPattern = new float[] {  2, 3 };
+                        penBig.DashPattern = new float[] { 2, 3 };
                         g.DrawEllipse(penBig,
                             (float)(_rotCenterX - _bigR),
                             (float)(_rotCenterY - _bigR),
@@ -244,7 +248,7 @@ namespace DuizhunDataDemo
                             (float)(_bigR * 2));
                     }
                     #endregion
-          
+
 
                     #region 2.标记【大圆旋转中心】红色十字
                     float cx = (float)_rotCenterX;
@@ -261,15 +265,7 @@ namespace DuizhunDataDemo
                         // 👇 在这里修改线型！
                         //penGz.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash; // 虚线
                         //public enum DashStyle
-                        //{
-                        //Solid,
-                        //Dash,
-                        //Dot,
-                        //DashDot,
-                        //DashDotDot,
-                        //Custom
-                        //}
-
+                        //{   //Solid,                        //Dash,                        //Dot,                        //DashDot,                        //DashDotDot,                        //Custom                        //}
                         // 自定义：短划线 5px，空 3px，点 2px，空 3px
                         penGz.DashPattern = new float[] { 5, 3, 2, 3 };
 
@@ -293,20 +289,20 @@ namespace DuizhunDataDemo
                     #region 4.当前实时晶圆中心(蓝色圆点，随大圆旋转) + 紫色晶圆外圈
                     float currX = (float)currWaferX;
                     float currY = (float)currWaferY;
-                 
+
                     #region 44.绘制基准大圆(淡紫色填充 + 紫色边框)
                     using (SolidBrush brushBig = new SolidBrush(Color.LightBlue))
                     using (Pen jingyuanWy = new Pen(Color.Blue, 1))
                     {
                         // 先填充
-                        g.FillEllipse(brushBig,
-                               currX - (float)_waferR,
-                            currY - (float)_waferR,
-                            (float)_waferR * 2,
-                            (float)_waferR * 2);
+                        //g.FillEllipse(brushBig,
+                        //       currX - (float)_waferR,
+                        //    currY - (float)_waferR,
+                        //    (float)_waferR * 2,
+                        //    (float)_waferR * 2);
 
                         // 再画边框（可选）紫色                        // 自定义：短划线 3px， 空 3px
-                        jingyuanWy.DashPattern = new float[] {3, 3 };
+                        jingyuanWy.DashPattern = new float[] { 3, 3 };
                         g.DrawEllipse(jingyuanWy,
                                currX - (float)_waferR,
                             currY - (float)_waferR,
@@ -314,13 +310,13 @@ namespace DuizhunDataDemo
                             (float)_waferR * 2);
                     }
                     #endregion 44
-                
+
 
                     #region 45.绘制8寸晶圆标准缺口 Notch (修复角度+坐标系)
                     // ===================== 8寸晶圆 Notch 标准尺寸 =====================
-                    float notchDepth = 4.0f;         // 缺口深度
-                    float notchWidth = 10f;          // 缺口开口宽度
 
+                    double notchWidth = _notchWidth;
+                    double notchDepth = _notchDepth;
                     // 1. 缺口基础偏角(控件输入 角度°) + 晶圆整体旋转角度
                     float notchBaseAngleDeg = (float)nudQuekouAngle.Value;
                     // 最终缺口朝向总角度（角度制）
@@ -330,8 +326,8 @@ namespace DuizhunDataDemo
 
                     // 2. 修复三角函数：屏幕Y向下，使用标准极坐标公式
                     // 极坐标：x = r*cosθ , y = r*sinθ
-                    PointF notchTopLeft = GetNotchPoint(currX, currY, (float)_waferR, totalNotchAngleRad, -notchWidth / 2);
-                    PointF notchTopRight = GetNotchPoint(currX, currY, (float)_waferR, totalNotchAngleRad, notchWidth / 2);
+                    PointF notchTopLeft = GetNotchPoint(currX, currY, (float)_waferR, totalNotchAngleRad, (float)(-notchWidth / 2.0));
+                    PointF notchTopRight = GetNotchPoint(currX, currY, (float)_waferR, totalNotchAngleRad, (float)(notchWidth / 2.0));
 
                     // 缺口底部顶点
                     PointF notchBottom = new PointF(
@@ -376,7 +372,7 @@ namespace DuizhunDataDemo
 
                 // 求交点
                 PointF[] points = GetRotatedWaferIntersectionPoints(
-                    currWaferX, currWaferY, 0, _rotCenterX, _rotCenterY, _totalAngle, _waferR,
+                    currWaferX, currWaferY, rad, _rotCenterX, _rotCenterY, _totalAngle, _waferR,
                     _lineLeft.X, _lineLeft.Y, _lineRight.X, _lineRight.Y);
 
                 foreach (var p in pts)
@@ -399,10 +395,12 @@ namespace DuizhunDataDemo
                         g.FillEllipse(brushPt, p.X - 3, p.Y - 3, 6, 6);
                     }
                 }
-                pictureBox1.Refresh();               
+                pictureBox1.Refresh();
             }
         }
-     
+
+        #endregion 【核心定时器事件】每50ms更新一次晶圆位置并重绘
+
         // 计算缺口开口点坐标（修复屏幕坐标系）
         private PointF GetNotchPoint(float centerX, float centerY, float radius, float angleRad, float offsetDeg)
         {
@@ -525,9 +523,11 @@ namespace DuizhunDataDemo
             // 2. 缺口最终角度（弧度）
             double notchAngle = alpha0 + alpha2Rad;
 
-            // 3. 缺口尺寸
-            double notchWidth = 2.5;
-            double notchDepth = 1.0;
+            // 3. 缺口尺寸 【修改这里】
+            // double notchWidth = 2.5;   // 删除原硬编码
+            // double notchDepth = 1.0;   // 删除原硬编码
+            double notchWidth = _notchWidth;
+            double notchDepth = _notchDepth;
 
             // 4. 线段与晶圆外圆交点
             var circlePoints = GetLineCircleIntersect(x3, y3, x4, y4, cx, cy, r);
@@ -552,7 +552,7 @@ namespace DuizhunDataDemo
             // 去重返回
             return res.Distinct().ToArray();
         }
-   
+
 
         // 线段 ↔ 圆 求交点（你原来的函数）
         private PointF[] GetLineCircleIntersect(double x1, double y1, double x2, double y2, double ox, double oy, double r)
@@ -578,22 +578,7 @@ namespace DuizhunDataDemo
             return res.ToArray();
         }
 
-        // 线段 ↔ 线段 求交点
-        private PointF? LineLineIntersectOLD带延长线(double x1, double y1, double x2, double y2,
-                                          double x3, double y3, double x4, double y4)
-        {
-            double denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
-            if (Math.Abs(denom) < 1e-9) return null;
 
-            double ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom;
-            double ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denom;
-
-            if (ua >= 0 && ua <= 1 && ub >= 0 && ub <= 1)
-            {
-                return new PointF((float)(x1 + ua * (x2 - x1)), (float)(y1 + ua * (y2 - y1)));
-            }
-            return null;
-        }
         // 线段 ↔ 线段 求交点（优化精度，仅返回两条线段范围内的交点）
         private PointF? LineLineIntersect(double x1, double y1, double x2, double y2,
                                           double x3, double y3, double x4, double y4)
@@ -613,96 +598,8 @@ namespace DuizhunDataDemo
             }
             return null;
         }
-        /// <summary>线段与圆交点</summary>
-        //private PointF[] GetLineCircleIntersect(double x1, double y1, double x2, double y2, double ox, double oy, double r)
-        //{
-        //    List<PointF> res = new();
-        //    double dx = x2 - x1;
-        //    double dy = y2 - y1;
-        //    double A = dx * dx + dy * dy;
-        //    double B = 2 * (dx * (x1 - ox) + dy * (y1 - oy));
-        //    double C = (x1 - ox) * (x1 - ox) + (y1 - oy) * (y1 - oy) - r * r;
-        //    double delta = B * B - 4 * A * C;
-        //    if (delta < 0) return Array.Empty<PointF>();
-        //    double sq = Math.Sqrt(delta);
-        //    double t1 = (-B - sq) / (2 * A);
-        //    double t2 = (-B + sq) / (2 * A);
 
-        //    if (t1 >= 0 && t1 <= 1)
-        //        res.Add(new PointF((float)(x1 + t1 * dx), (float)(y1 + t1 * dy)));
-        //    if (t2 >= 0 && t2 <= 1 && Math.Abs(t1 - t2) > 1e-6)
-        //        res.Add(new PointF((float)(x1 + t2 * dx), (float)(y1 + t2 * dy)));
-        //    return res.ToArray();
-        //}
 
-        private PointF[] GetLineCircleIntersect2(double x1, double y1, double x2, double y2, double ox, double oy, double r)
-        {
-            List<PointF> res = new List<PointF>();
-
-            // ===================== 1. 原有逻辑：求线段与圆的交点 =====================
-            double dx = x2 - x1;
-            double dy = y2 - y1;
-            double A = dx * dx + dy * dy;
-            double B = 2 * (dx * (x1 - ox) + dy * (y1 - oy));
-            double C = (x1 - ox) * (x1 - ox) + (y1 - oy) * (y1 - oy) - r * r;
-            double delta = B * B - 4 * A * C;
-
-            if (delta >= 0)
-            {
-                double sq = Math.Sqrt(delta);
-                double t1 = (-B - sq) / (2 * A);
-                double t2 = (-B + sq) / (2 * A);
-
-                if (t1 >= 0 && t1 <= 1)
-                    res.Add(new PointF((float)(x1 + t1 * dx), (float)(y1 + t1 * dy)));
-                if (t2 >= 0 && t2 <= 1 && Math.Abs(t1 - t2) > 1e-6)
-                    res.Add(new PointF((float)(x1 + t2 * dx), (float)(y1 + t2 * dy)));
-            }
-
-            // ===================== 2. 新增：求线段与 8寸晶圆 Notch 缺口的交点 =====================
-            // 标准缺口尺寸（和你绘图代码完全一致）
-            double notchAngle = 90 * Math.PI / 180;   // 缺口朝向：正下方
-            double notchWidth = 2.5;                  // 开口宽度
-            double notchDepth = 1.0;                  // 深度
-
-            // 计算缺口两条边的 4 个端点
-            double nw = notchWidth / 2;
-            double nx1 = ox + r * Math.Sin(notchAngle - nw / r);
-            double ny1 = oy + r * Math.Cos(notchAngle - nw / r);
-            double nx2 = ox + r * Math.Sin(notchAngle + nw / r);
-            double ny2 = oy + r * Math.Cos(notchAngle + nw / r);
-            double nx3 = ox + (r - notchDepth) * Math.Sin(notchAngle);
-            double ny3 = oy + (r - notchDepth) * Math.Cos(notchAngle);
-
-            // 求线段与两条缺口边的交点
-            var p1 = GetLineLineIntersect(x1, y1, x2, y2, nx1, ny1, nx3, ny3);
-            var p2 = GetLineLineIntersect(x1, y1, x2, y2, nx2, ny2, nx3, ny3);
-
-            if (p1.HasValue) res.Add(p1.Value);
-            if (p2.HasValue) res.Add(p2.Value);
-
-            // ===================== 3. 去重、排序 =====================
-            return res.Distinct().OrderBy(p => (p.X - x1) * (p.X - x1) + (p.Y - y1) * (p.Y - y1)).ToArray();
-        }
-        // 线段与线段求交点（内部使用）
-        private PointF? GetLineLineIntersect(double x1, double y1, double x2, double y2,
-                                             double x3, double y3, double x4, double y4)
-        {
-            double denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
-            if (Math.Abs(denom) < 1e-6) return null;
-
-            double ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom;
-            double ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denom;
-
-            if (ua >= 0 && ua <= 1 && ub >= 0 && ub <= 1)
-            {
-                return new PointF(
-                    (float)(x1 + ua * (x2 - x1)),
-                    (float)(y1 + ua * (y2 - y1))
-                );
-            }
-            return null;
-        }
 
         //可选：添加一个按钮控制标尺显示/隐藏
         private void btnToggleRuler_Click(object sender, EventArgs e)
@@ -760,7 +657,7 @@ namespace DuizhunDataDemo
         private void btnClose_Click(object sender, EventArgs e)
         {
             _timer.Enabled = false;
-            this.Close();   
+            this.Close();
         }
     }
 }
