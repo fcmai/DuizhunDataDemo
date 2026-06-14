@@ -221,6 +221,28 @@ namespace DuizhunDataDemo
                 if (_totalAngle > maxJiaodu旋转)
                 {
                     _timer.Enabled = false;
+                    float finalNotchAngleDeg = ((float)nudQuekouAngle.Value + (float)_totalAngle) % 360f;
+                    if (finalNotchAngleDeg < 0) finalNotchAngleDeg += 360f;
+                    lblAngles.Text = $"底盘转角：{_totalAngle:F2}°  缺口转角：{finalNotchAngleDeg:F2}°";
+                    lblCrossPoints.Text = "交点坐标：无交点";
+
+                    // 自动保存：chk自动保存勾选时，旋转结束后自动导出lstLog为csv
+                    if (chk自动保存.Checked)
+                    {
+                        try
+                        {
+                            string fileName = $"数据导出{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+                            string savePath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, fileName);
+                            string csvContent = GenerateCsvFromListBox(lstLog);
+                            System.IO.File.WriteAllText(savePath, csvContent, Encoding.UTF8);
+                            lstLog.Items.Add($"[自动保存] 已保存至：{savePath}");
+                        }
+                        catch (Exception ex)
+                        {
+                            lstLog.Items.Add($"[自动保存] 保存失败：{ex.Message}");
+                        }
+                    }
+
                     return;
                 }
 
@@ -444,15 +466,23 @@ namespace DuizhunDataDemo
                 }
                 // =========================================================
 
-                // 5. 日志输出
+                // 5. 更新lblAngles和lblCrossPoints显示
+                float displayNotchAngle = totalNotchAngleDeg % 360f;
+                if (displayNotchAngle < 0) displayNotchAngle += 360f;
+                lblAngles.Text = $"底盘转角：{_totalAngle:F2}°  缺口转角：{displayNotchAngle:F2}°";
+                lblCrossPoints.Text = uniquePoints.Count > 0
+                    ? $"交点坐标：（{uniquePoints[0].X:F0}，{uniquePoints[0].Y:F0}）"
+                    : "交点坐标：无交点";
+
+                // 6. 日志输出
                 foreach (var p in uniquePoints)
                 {
-                    string logStr = $"总转角:{_totalAngle:F4}° | 轮廓交点 X={p.X:F4}, Y={p.Y:F4}";
+                    string logStr = $"总转角:,{_totalAngle:F4},° | 轮廓交点 (X，Y),{p.X:F4},{p.Y:F4}";
                     Trace.WriteLine(logStr);
                     lstLog.Items.Add(logStr);
                 }
 
-                // 6. 绘制交点
+                // 7. 绘制交点
                 using (Graphics g = Graphics.FromImage(_bmp))
                 using (SolidBrush brushPt = new SolidBrush(Color.Red))
                 {
@@ -460,8 +490,7 @@ namespace DuizhunDataDemo
                     {
                         g.FillEllipse(brushPt, p.X - 4, p.Y - 4, 8, 8);
                     }
-                }
- 
+                } 
             
                 pictureBox1.Refresh();
             }
@@ -544,51 +573,51 @@ namespace DuizhunDataDemo
             // 设置抗锯齿模式
             g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
 
+            // 标尺边距
+            int marginLeft = 40;
+            int marginBottom = 25;
+
             using (Pen rulerPen = new Pen(_rulerColor, 1))
             using (Font font = new Font("Arial", 8))
             using (SolidBrush textBrush = new SolidBrush(_rulerTextColor))
             {
                 // === 绘制X轴标尺（底部） ===
-                int yXAxis = height - 20; // X轴位置（底部）
+                int yXAxis = height - marginBottom;
                 g.DrawLine(rulerPen, 0, yXAxis, width, yXAxis);
 
                 // X轴刻度
                 for (int x = 0; x <= width; x += _rulerStep)
                 {
-                    // 绘制刻度线
                     g.DrawLine(rulerPen, x, yXAxis - 5, x, yXAxis + 2);
 
-                    // 绘制刻度数字
                     string text = x.ToString();
                     SizeF textSize = g.MeasureString(text, font);
-                    g.DrawString(text, font, textBrush, x - textSize.Width / 2, yXAxis + 2);
+                    g.DrawString(text, font, textBrush, x - textSize.Width / 2, yXAxis + 3);
                 }
 
                 // X轴标签
-                g.DrawString("X (像素)", font, textBrush, width - 30, yXAxis + 5);
+                g.DrawString("X (像素)", font, textBrush, width - 55, yXAxis + 10);
 
                 // === 绘制Y轴标尺（左侧） ===
-                int xYAxis = 20; // Y轴位置（左侧）
+                int xYAxis = marginLeft;
                 g.DrawLine(rulerPen, xYAxis, 0, xYAxis, height);
 
                 // Y轴刻度
                 for (int y = 0; y <= height; y += _rulerStep)
                 {
-                    // 绘制刻度线
                     g.DrawLine(rulerPen, xYAxis - 5, y, xYAxis + 2, y);
 
-                    // 绘制刻度数字
                     string text = y.ToString();
                     SizeF textSize = g.MeasureString(text, font);
-                    g.DrawString(text, font, textBrush, xYAxis - textSize.Width - 2, y - textSize.Height / 2);
+                    g.DrawString(text, font, textBrush, xYAxis - textSize.Width - 4, y - textSize.Height / 2);
                 }
 
                 // Y轴标签
                 using (Matrix rotateMatrix = new Matrix())
                 {
-                    rotateMatrix.RotateAt(-90, new PointF(xYAxis - 15, 15));
+                    rotateMatrix.RotateAt(-90, new PointF(12, height / 2));
                     g.Transform = rotateMatrix;
-                    g.DrawString("Y (像素)", font, textBrush, -height + 15, xYAxis - 25);
+                    g.DrawString("Y (像素)", font, textBrush, -height / 2 - 20, 2);
                     g.Transform = oldTransform;
                 }
 
@@ -597,16 +626,14 @@ namespace DuizhunDataDemo
                 {
                     gridPen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dot;
 
-                    // 垂直网格线
                     for (int x = 0; x <= width; x += _rulerStep)
                     {
-                        if (x != 0 && x != width) // 跳过边缘，避免与轴线重叠
+                        if (x != 0 && x != width)
                         {
                             g.DrawLine(gridPen, x, 0, x, height);
                         }
                     }
 
-                    // 水平网格线
                     for (int y = 0; y <= height; y += _rulerStep)
                     {
                         if (y != 0 && y != height)
@@ -701,10 +728,6 @@ namespace DuizhunDataDemo
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            // 可以在Form1上添加一个按钮来控制标尺（可选）
-            // 例如：Button btnRuler = new Button() { Text = "隐藏标尺", Location = new Point(10, 10), Size = new Size(80, 30) };
-            // btnRuler.Click += btnToggleRuler_Click;
-            // this.Controls.Add(btnRuler);
             // 离屏绘图
             using (Graphics g = Graphics.FromImage(_bmp))
             {
@@ -715,7 +738,166 @@ namespace DuizhunDataDemo
                     DrawRuler(g);
                 }
             }
+
+            // 从config.ini加载方案列表
+            LoadSchemeList();
         }
+
+        #region 参数方案：从ini加载/保存/选择
+
+        // 所有需要持久化的参数key列表
+        private static readonly string[] _paramKeys = new[]
+        {
+            "Cx", "Cy", "DipanR", "WaferCx", "WaferCy", "WaferR", "WaferErr",
+            "Omega", "旋转总角度", "线阵分辨率", "Lx", "Ly", "Rx", "Ry",
+            "QuekouAngle", "ChkEnabled"
+        };
+
+        /// <summary>
+        /// 启动时从config.ini加载方案列表，并加载上一次使用的方案参数
+        /// </summary>
+        private void LoadSchemeList()
+        {
+            cbxParasSelect.Items.Clear();
+
+            var schemes = IniHelper.ReadSchemeList();
+            foreach (var s in schemes)
+            {
+                cbxParasSelect.Items.Add(s);
+            }
+
+            // 读取上次使用的方案名
+            string lastScheme = IniHelper.ReadValue("Global", "LastScheme", "");
+            if (!string.IsNullOrEmpty(lastScheme))
+            {
+                int idx = cbxParasSelect.Items.IndexOf(lastScheme);
+                if (idx >= 0)
+                {
+                    cbxParasSelect.SelectedIndex = idx;
+                    // LoadParamsFromScheme 内部由 SelectedIndexChanged 触发
+                }
+            }
+        }
+
+        /// <summary>
+        /// 从config.ini的指定方案section读取参数并加载到控件
+        /// </summary>
+        private void LoadParamsFromScheme(string schemeName)
+        {
+            var dict = IniHelper.ReadSection($"Scheme_{schemeName}");
+            if (dict.Count == 0) return;
+
+            SetNudValue(nudCx, dict, "Cx");
+            SetNudValue(nudCy, dict, "Cy");
+            SetNudValue(nudDipanR, dict, "DipanR");
+            SetNudValue(nudWaferCx, dict, "WaferCx");
+            SetNudValue(nudWaferCy, dict, "WaferCy");
+            SetNudValue(nudWaferR, dict, "WaferR");
+            SetNudValue(nudWaferErr, dict, "WaferErr");
+            SetNudValue(nudOmega, dict, "Omega");
+            SetNudValue(nud旋转总角度, dict, "旋转总角度");
+            SetNudValue(nud线阵分辨率, dict, "线阵分辨率");
+            SetNudValue(nudLx, dict, "Lx");
+            SetNudValue(nudLy, dict, "Ly");
+            SetNudValue(nudRx, dict, "Rx");
+            SetNudValue(nudRy, dict, "Ry");
+            SetNudValue(nudQuekouAngle, dict, "QuekouAngle");
+
+            if (dict.ContainsKey("ChkEnabled"))
+                chk.Checked = dict["ChkEnabled"].Equals("True", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// 将当前控件参数保存到config.ini的指定方案section
+        /// </summary>
+        private void SaveParamsToScheme(string schemeName)
+        {
+            string section = $"Scheme_{schemeName}";
+            IniHelper.WriteValue(section, "Cx", nudCx.Value.ToString());
+            IniHelper.WriteValue(section, "Cy", nudCy.Value.ToString());
+            IniHelper.WriteValue(section, "DipanR", nudDipanR.Value.ToString());
+            IniHelper.WriteValue(section, "WaferCx", nudWaferCx.Value.ToString());
+            IniHelper.WriteValue(section, "WaferCy", nudWaferCy.Value.ToString());
+            IniHelper.WriteValue(section, "WaferR", nudWaferR.Value.ToString());
+            IniHelper.WriteValue(section, "WaferErr", nudWaferErr.Value.ToString());
+            IniHelper.WriteValue(section, "Omega", nudOmega.Value.ToString());
+            IniHelper.WriteValue(section, "旋转总角度", nud旋转总角度.Value.ToString());
+            IniHelper.WriteValue(section, "线阵分辨率", nud线阵分辨率.Value.ToString());
+            IniHelper.WriteValue(section, "Lx", nudLx.Value.ToString());
+            IniHelper.WriteValue(section, "Ly", nudLy.Value.ToString());
+            IniHelper.WriteValue(section, "Rx", nudRx.Value.ToString());
+            IniHelper.WriteValue(section, "Ry", nudRy.Value.ToString());
+            IniHelper.WriteValue(section, "QuekouAngle", nudQuekouAngle.Value.ToString());
+            IniHelper.WriteValue(section, "ChkEnabled", chk.Checked.ToString());
+
+            // 更新方案列表（如果是新方案则加入）
+            var schemes = IniHelper.ReadSchemeList();
+            if (!schemes.Contains(schemeName))
+            {
+                schemes.Add(schemeName);
+                IniHelper.WriteSchemeList(schemes);
+            }
+
+            // 记录当前使用的方案
+            IniHelper.WriteValue("Global", "LastScheme", schemeName);
+        }
+
+        /// <summary>
+        /// 从字典中读取值设置到NumericUpDown控件
+        /// </summary>
+        private void SetNudValue(NumericUpDown nud, Dictionary<string, string> dict, string key)
+        {
+            if (dict.ContainsKey(key) && decimal.TryParse(dict[key], out decimal val))
+            {
+                // 限制在控件范围内
+                val = Math.Max(nud.Minimum, Math.Min(nud.Maximum, val));
+                nud.Value = val;
+            }
+        }
+
+        /// <summary>
+        /// 下拉框选择方案时加载参数
+        /// </summary>
+        private void cbxParasSelect_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            string schemeName = cbxParasSelect.Text?.Trim();
+            if (string.IsNullOrEmpty(schemeName)) return;
+
+            LoadParamsFromScheme(schemeName);
+            IniHelper.WriteValue("Global", "LastScheme", schemeName);
+        }
+
+        /// <summary>
+        /// 保存当前参数按钮点击
+        /// </summary>
+        private void btnSaveParams_Click(object sender, EventArgs e)
+        {
+            string schemeName = cbxParasSelect.Text?.Trim();
+
+            if (string.IsNullOrEmpty(schemeName))
+            {
+                MessageBox.Show("请先在参数方案选择框中输入或选择一个方案名称！", "提示",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // 检查是否是新方案
+            bool isNewScheme = !cbxParasSelect.Items.Contains(schemeName);
+
+            SaveParamsToScheme(schemeName);
+
+            // 如果是新方案，加入下拉列表
+            if (isNewScheme)
+            {
+                cbxParasSelect.Items.Add(schemeName);
+                cbxParasSelect.SelectedIndex = cbxParasSelect.Items.IndexOf(schemeName);
+            }
+
+            MessageBox.Show($"参数方案「{schemeName}」保存成功！\n保存路径：{IniHelper.IniPath}",
+                "保存成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        #endregion 参数方案：从ini加载/保存/选择
 
         private void btn切换定时器使能_Click(object sender, EventArgs e)
         {
@@ -727,6 +909,31 @@ namespace DuizhunDataDemo
         {
             _timer.Enabled = false;
             this.Close();
+        }
+
+        private void btnDel_Click(object sender, EventArgs e)
+        {
+            string schemeName = cbxParasSelect.Text?.Trim();
+            if (string.IsNullOrEmpty(schemeName)) return;
+
+            var schemes = IniHelper.ReadSchemeList();
+            if (!schemes.Contains(schemeName)) return;
+
+            // 删除ini中对应section
+            IniHelper.DeleteSection($"Scheme_{schemeName}");
+
+            // 从方案列表中移除并写回
+            schemes.Remove(schemeName);
+            IniHelper.WriteSchemeList(schemes);
+
+            // 如果删除的是上次使用的方案，清空LastScheme
+            string lastScheme = IniHelper.ReadValue("Global", "LastScheme", "");
+            if (lastScheme == schemeName)
+                IniHelper.WriteValue("Global", "LastScheme", "");
+
+            // 从下拉框移除
+            cbxParasSelect.Items.Remove(schemeName);
+            cbxParasSelect.Text = "";
         }
     }
 }

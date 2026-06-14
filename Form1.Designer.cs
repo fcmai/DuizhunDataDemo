@@ -29,17 +29,13 @@
             groupBox2 = new GroupBox();
             splitContainer1 = new SplitContainer();
             btn保存数据 = new Button();
-            comboBox1 = new ComboBox();
+            cbxParasSelect = new ComboBox();
             tab1 = new TabControl();
             tabPage1 = new TabPage();
+            chk自动保存 = new CheckBox();
             panel13 = new Panel();
+            lblCrossPoints = new Label();
             lblAngles = new Label();
-            panel12 = new Panel();
-            checkBox2 = new CheckBox();
-            numericUpDown3 = new NumericUpDown();
-            label14 = new Label();
-            numericUpDown4 = new NumericUpDown();
-            label15 = new Label();
             panel7 = new Panel();
             checkBox1 = new CheckBox();
             numericUpDown1 = new NumericUpDown();
@@ -52,6 +48,8 @@
             nudRy = new NumericUpDown();
             nudRx = new NumericUpDown();
             label4 = new Label();
+            btnDel = new Button();
+            btnSaveParams = new Button();
             panel3 = new Panel();
             nudLy = new NumericUpDown();
             nudLx = new NumericUpDown();
@@ -94,9 +92,6 @@
             tab1.SuspendLayout();
             tabPage1.SuspendLayout();
             panel13.SuspendLayout();
-            panel12.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)numericUpDown3).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)numericUpDown4).BeginInit();
             panel7.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)numericUpDown1).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudQuekouAngle).BeginInit();
@@ -226,15 +221,15 @@
             btn保存数据.UseVisualStyleBackColor = true;
             btn保存数据.Click += btnSaveToCsv_Click;
             // 
-            // comboBox1
+            // cbxParasSelect
             // 
-            comboBox1.FormattingEnabled = true;
-            comboBox1.Items.AddRange(new object[] { "方案1 - 8寸- 100", "方案2 - 6寸- 75" });
-            comboBox1.Location = new Point(15, 29);
-            comboBox1.Margin = new Padding(4);
-            comboBox1.Name = "comboBox1";
-            comboBox1.Size = new Size(116, 28);
-            comboBox1.TabIndex = 8;
+            cbxParasSelect.FormattingEnabled = true;
+            cbxParasSelect.Location = new Point(15, 29);
+            cbxParasSelect.Margin = new Padding(4);
+            cbxParasSelect.Name = "cbxParasSelect";
+            cbxParasSelect.Size = new Size(116, 28);
+            cbxParasSelect.TabIndex = 8;
+            cbxParasSelect.SelectedIndexChanged += cbxParasSelect_SelectedIndexChanged;
             // 
             // tab1
             // 
@@ -249,11 +244,13 @@
             // 
             // tabPage1
             // 
+            tabPage1.Controls.Add(chk自动保存);
             tabPage1.Controls.Add(panel13);
-            tabPage1.Controls.Add(panel12);
             tabPage1.Controls.Add(panel7);
             tabPage1.Controls.Add(panel5);
             tabPage1.Controls.Add(panel4);
+            tabPage1.Controls.Add(btnDel);
+            tabPage1.Controls.Add(btnSaveParams);
             tabPage1.Controls.Add(panel3);
             tabPage1.Controls.Add(panel2);
             tabPage1.Controls.Add(panel10);
@@ -271,14 +268,36 @@
             tabPage1.Text = "参数设置";
             tabPage1.UseVisualStyleBackColor = true;
             // 
+            // chk自动保存
+            // 
+            chk自动保存.AutoSize = true;
+            chk自动保存.ForeColor = Color.Blue;
+            chk自动保存.Location = new Point(659, 231);
+            chk自动保存.Margin = new Padding(4);
+            chk自动保存.Name = "chk自动保存";
+            chk自动保存.Size = new Size(159, 24);
+            chk自动保存.TabIndex = 15;
+            chk自动保存.Text = "自动保存输出到csv";
+            chk自动保存.UseVisualStyleBackColor = true;
+            // 
             // panel13
             // 
+            panel13.Controls.Add(lblCrossPoints);
             panel13.Controls.Add(lblAngles);
-            panel13.Location = new Point(646, 184);
+            panel13.Location = new Point(334, 184);
             panel13.Margin = new Padding(3, 4, 3, 4);
             panel13.Name = "panel13";
             panel13.Size = new Size(287, 71);
             panel13.TabIndex = 14;
+            // 
+            // lblCrossPoints
+            // 
+            lblCrossPoints.AutoSize = true;
+            lblCrossPoints.Location = new Point(8, 35);
+            lblCrossPoints.Name = "lblCrossPoints";
+            lblCrossPoints.Size = new Size(84, 20);
+            lblCrossPoints.TabIndex = 2;
+            lblCrossPoints.Text = "交点坐标：";
             // 
             // lblAngles
             // 
@@ -288,74 +307,6 @@
             lblAngles.Size = new Size(163, 20);
             lblAngles.TabIndex = 1;
             lblAngles.Text = "底盘转角： 缺口转角：";
-            // 
-            // panel12
-            // 
-            panel12.Controls.Add(checkBox2);
-            panel12.Controls.Add(numericUpDown3);
-            panel12.Controls.Add(label14);
-            panel12.Controls.Add(numericUpDown4);
-            panel12.Controls.Add(label15);
-            panel12.Location = new Point(334, 184);
-            panel12.Margin = new Padding(3, 4, 3, 4);
-            panel12.Name = "panel12";
-            panel12.Size = new Size(287, 71);
-            panel12.TabIndex = 13;
-            panel12.Visible = false;
-            // 
-            // checkBox2
-            // 
-            checkBox2.AutoSize = true;
-            checkBox2.ForeColor = Color.Blue;
-            checkBox2.Location = new Point(202, 33);
-            checkBox2.Margin = new Padding(4);
-            checkBox2.Name = "checkBox2";
-            checkBox2.Size = new Size(61, 24);
-            checkBox2.TabIndex = 3;
-            checkBox2.Text = "启用";
-            checkBox2.UseVisualStyleBackColor = true;
-            // 
-            // numericUpDown3
-            // 
-            numericUpDown3.DecimalPlaces = 2;
-            numericUpDown3.Increment = new decimal(new int[] { 1, 0, 0, 131072 });
-            numericUpDown3.Location = new Point(123, 33);
-            numericUpDown3.Margin = new Padding(3, 4, 3, 4);
-            numericUpDown3.Maximum = new decimal(new int[] { 1, 0, 0, 0 });
-            numericUpDown3.Minimum = new decimal(new int[] { 1, 0, 0, int.MinValue });
-            numericUpDown3.Name = "numericUpDown3";
-            numericUpDown3.Size = new Size(72, 27);
-            numericUpDown3.TabIndex = 2;
-            numericUpDown3.Value = new decimal(new int[] { 1, 0, 0, 131072 });
-            // 
-            // label14
-            // 
-            label14.AutoSize = true;
-            label14.Location = new Point(123, 11);
-            label14.Name = "label14";
-            label14.Size = new Size(69, 20);
-            label14.TabIndex = 1;
-            label14.Text = "随机偏差";
-            // 
-            // numericUpDown4
-            // 
-            numericUpDown4.DecimalPlaces = 2;
-            numericUpDown4.Increment = new decimal(new int[] { 1, 0, 0, 131072 });
-            numericUpDown4.Location = new Point(15, 33);
-            numericUpDown4.Margin = new Padding(3, 4, 3, 4);
-            numericUpDown4.Maximum = new decimal(new int[] { 360, 0, 0, 0 });
-            numericUpDown4.Name = "numericUpDown4";
-            numericUpDown4.Size = new Size(99, 27);
-            numericUpDown4.TabIndex = 2;
-            // 
-            // label15
-            // 
-            label15.AutoSize = true;
-            label15.Location = new Point(15, 9);
-            label15.Name = "label15";
-            label15.Size = new Size(69, 20);
-            label15.TabIndex = 1;
-            label15.Text = "缺口转角";
             // 
             // panel7
             // 
@@ -427,7 +378,7 @@
             // panel5
             // 
             panel5.Controls.Add(label7);
-            panel5.Controls.Add(comboBox1);
+            panel5.Controls.Add(cbxParasSelect);
             panel5.Location = new Point(31, 18);
             panel5.Margin = new Padding(3, 4, 3, 4);
             panel5.Name = "panel5";
@@ -486,6 +437,28 @@
             label4.Size = new Size(84, 20);
             label4.TabIndex = 1;
             label4.Text = "线阵右端点";
+            // 
+            // btnDel
+            // 
+            btnDel.Location = new Point(861, 233);
+            btnDel.Margin = new Padding(3, 4, 3, 4);
+            btnDel.Name = "btnDel";
+            btnDel.Size = new Size(145, 41);
+            btnDel.TabIndex = 4;
+            btnDel.Text = "删除当前参数";
+            btnDel.UseVisualStyleBackColor = true;
+            btnDel.Click += btnDel_Click;
+            // 
+            // btnSaveParams
+            // 
+            btnSaveParams.Location = new Point(861, 185);
+            btnSaveParams.Margin = new Padding(3, 4, 3, 4);
+            btnSaveParams.Name = "btnSaveParams";
+            btnSaveParams.Size = new Size(145, 41);
+            btnSaveParams.TabIndex = 4;
+            btnSaveParams.Text = "保存当前参数";
+            btnSaveParams.UseVisualStyleBackColor = true;
+            btnSaveParams.Click += btnSaveParams_Click;
             // 
             // panel3
             // 
@@ -671,9 +644,9 @@
             label9.AutoSize = true;
             label9.Location = new Point(15, 9);
             label9.Name = "label9";
-            label9.Size = new Size(84, 20);
+            label9.Size = new Size(69, 20);
             label9.TabIndex = 1;
-            label9.Text = "大圆盘半径";
+            label9.Text = "底盘半径";
             // 
             // panel11
             // 
@@ -694,7 +667,7 @@
             nud旋转总角度.Name = "nud旋转总角度";
             nud旋转总角度.Size = new Size(84, 27);
             nud旋转总角度.TabIndex = 2;
-            nud旋转总角度.Value = new decimal(new int[] { 7200, 0, 0, 0 });
+            nud旋转总角度.Value = new decimal(new int[] { 720, 0, 0, 0 });
             // 
             // label11
             // 
@@ -857,12 +830,9 @@
             splitContainer1.ResumeLayout(false);
             tab1.ResumeLayout(false);
             tabPage1.ResumeLayout(false);
+            tabPage1.PerformLayout();
             panel13.ResumeLayout(false);
             panel13.PerformLayout();
-            panel12.ResumeLayout(false);
-            panel12.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)numericUpDown3).EndInit();
-            ((System.ComponentModel.ISupportInitialize)numericUpDown4).EndInit();
             panel7.ResumeLayout(false);
             panel7.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)numericUpDown1).EndInit();
@@ -914,7 +884,7 @@
         private GroupBox groupBox2;
         private SplitContainer splitContainer1;
         private Button btn保存数据;
-        private ComboBox comboBox1;
+        private ComboBox cbxParasSelect;
         private TabControl tab1;
         private TabPage tabPage1;
         private TabPage tabPage2;
@@ -955,12 +925,6 @@
         private Button btnClose;
         private Panel panel5;
         private Label label7;
-        private Panel panel12;
-        private CheckBox checkBox2;
-        private NumericUpDown numericUpDown3;
-        private Label label14;
-        private NumericUpDown numericUpDown4;
-        private Label label15;
         private Panel panel7;
         private CheckBox checkBox1;
         private NumericUpDown numericUpDown1;
@@ -969,5 +933,9 @@
         private Label label13;
         private Panel panel13;
         private Label lblAngles;
+        private Label lblCrossPoints;
+        private Button btnSaveParams;
+        private Button btnDel;
+        private CheckBox chk自动保存;
     }
 }

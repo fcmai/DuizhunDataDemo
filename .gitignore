@@ -32,6 +32,8 @@ bld/
 [Oo]ut/
 [Ll]og/
 [Ll]ogs/
+# 忽略自定义 output 编译目录
+/output/
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/
