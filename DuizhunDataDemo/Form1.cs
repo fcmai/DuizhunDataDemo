@@ -30,6 +30,16 @@ namespace DuizhunDataDemo
         private PointF _lineLeft = new PointF(80, 320);
         private PointF _lineRight = new PointF(420, 320);
 
+        // ============ 底盘圆心拟合相关 ============
+        // 每个采样角记录：底盘转角θ、线阵采集的晶圆边缘交点 P(θ)、该角下晶圆圆心 C(θ)
+        public struct FitSample
+        {
+            public double Angle;
+            public PointF Edge;
+            public PointF Center;
+        }
+        private readonly List<FitSample> _samples = new List<FitSample>();
+
         // ========= 新增：全局统一缺口尺寸 =========
         private readonly float _notchDepth = 8.0f;
         private readonly float _notchWidth = 20f;
@@ -103,6 +113,7 @@ namespace DuizhunDataDemo
             {
                 _totalAngle = 0;
                 _timer.Enabled = false;
+                _samples.Clear();
 
                 UpdateParas();
 
@@ -482,6 +493,17 @@ namespace DuizhunDataDemo
                     lstLog.Items.Add(logStr);
                 }
 
+                // 6.1 采集底盘圆心拟合样本（边缘点 + 该角晶圆圆心）
+                if (uniquePoints.Count > 0)
+                {
+                    _samples.Add(new FitSample
+                    {
+                        Angle = _totalAngle,
+                        Edge = uniquePoints[0],
+                        Center = new PointF(currX, currY)
+                    });
+                }
+
                 // 7. 绘制交点
                 using (Graphics g = Graphics.FromImage(_bmp))
                 using (SolidBrush brushPt = new SolidBrush(Color.Red))
@@ -696,6 +718,180 @@ namespace DuizhunDataDemo
         }
         #endregion    线段 ↔ 线段 求交点（优化精度，仅返回两条线段范围内的交点）
 
+        #region 【底盘圆心拟合】未知底盘圆心时，从边缘交点反推旋转中心
+
+        /// <summary>
+        /// 正确做法：已知晶圆半径 Rw 与线阵方向 d̂ 时，先从每个边缘点 P(θ)=C(θ)±Rw·d̂ 扣除 Rw·d̂ 得到
+        /// 晶圆圆心轨迹 m_i=C(θ)，再用线性最小二乘拟合 O（θ 已知）：
+        ///   m_i.x = Ox + cosθ·a − sinθ·b
+        ///   m_i.y = Oy + sinθ·a + cosθ·b   （a=e·cos(rad), b=e·sin(rad)）
+        /// 4 个未知数 (Ox,Oy,a,b) 全部线性可解，无需迭代、不受小圆病态影响。
+        /// </summary>
+        public static bool FitChassisCenter(List<(double angle, PointF m)> data,
+            out double Ox, out double Oy, out double ecc, out double radDeg)
+        {
+            Ox = Oy = ecc = radDeg = 0;
+            int n = data.Count;
+            if (n < 4) return false;
+
+            // 设计矩阵：每行对应 x、y 两个约束，未知 (Ox, Oy, a, b)
+            double[,] A = new double[2 * n, 4];
+            double[] b = new double[2 * n];
+            for (int i = 0; i < n; i++)
+            {
+                double th = data[i].angle * Math.PI / 180.0;
+                double c = Math.Cos(th), s = Math.Sin(th);
+                A[2 * i, 0] = 1; A[2 * i, 1] = 0; A[2 * i, 2] = c; A[2 * i, 3] = -s; b[2 * i] = data[i].m.X;
+                A[2 * i + 1, 0] = 0; A[2 * i + 1, 1] = 1; A[2 * i + 1, 2] = s; A[2 * i + 1, 3] = c; b[2 * i + 1] = data[i].m.Y;
+            }
+
+            // 正规方程 4×4
+            double[,] N = new double[4, 4];
+            double[] v = new double[4];
+            for (int r = 0; r < 4; r++)
+            {
+                double sv = 0;
+                for (int k = 0; k < 2 * n; k++) sv += A[k, r] * b[k];
+                v[r] = sv;
+                for (int c2 = 0; c2 < 4; c2++)
+                {
+                    double sum = 0;
+                    for (int k = 0; k < 2 * n; k++) sum += A[k, r] * A[k, c2];
+                    N[r, c2] = sum;
+                }
+            }
+
+            if (!SolveLinear(N, v, out double[] x)) return false;
+            Ox = x[0]; Oy = x[1];
+            double a = x[2], bb = x[3];
+            ecc = Math.Sqrt(a * a + bb * bb);
+            radDeg = Math.Atan2(bb, a) * 180.0 / Math.PI;
+            if (radDeg < 0) radDeg += 360.0;
+            return true;
+        }
+
+        /// <summary>
+        /// 朴素（错误）示范：直接对边缘点 P(θ) 拟合成圆并取圆心。
+        /// 因为 P(θ) 轨迹的圆心是 O ± Rw·d̂ 而非 O，结果会系统性偏移 Rw（默认约几十像素）。
+        /// </summary>
+        public static bool FitCircleKasa(List<PointF> pts, out double cx, out double cy, out double r)
+        {
+            cx = cy = r = 0;
+            int n = pts.Count;
+            if (n < 3) return false;
+
+            // 代数圆拟合: x²+y² + A·x + B·y + C = 0  →  x·A + y·B + 1·C = -(x²+y²)
+            double[,] M = new double[3, 3];
+            double[] rhs = new double[3];
+            for (int i = 0; i < n; i++)
+            {
+                double x = pts[i].X, y = pts[i].Y;
+                double xx = x * x + y * y;
+                double[] row = { x, y, 1 };
+                for (int ri = 0; ri < 3; ri++)
+                {
+                    for (int cj = 0; cj < 3; cj++) M[ri, cj] += row[ri] * row[cj];
+                    rhs[ri] += row[ri] * (-xx);
+                }
+            }
+            if (!SolveLinear(M, rhs, out double[] p)) return false;
+            double A = p[0], B = p[1], C = p[2];
+            cx = -A / 2; cy = -B / 2;
+            r = Math.Sqrt(Math.Max(0, (A * A + B * B) / 4 - C));
+            return true;
+        }
+
+        /// <summary>
+        /// 高斯消元解线性方程组 M·x = b（部分主元）
+        /// </summary>
+        private static bool SolveLinear(double[,] M, double[] b, out double[] x)
+        {
+            int n = b.Length;
+            x = new double[n];
+            double[,] A = (double[,])M.Clone();
+            double[] bb = (double[])b.Clone();
+
+            for (int col = 0; col < n; col++)
+            {
+                int piv = col;
+                for (int r = col + 1; r < n; r++)
+                    if (Math.Abs(A[r, col]) > Math.Abs(A[piv, col])) piv = r;
+                if (Math.Abs(A[piv, col]) < 1e-12) return false;
+
+                if (piv != col)
+                {
+                    for (int k = 0; k < n; k++) { double t = A[col, k]; A[col, k] = A[piv, k]; A[piv, k] = t; }
+                    double tb = bb[col]; bb[col] = bb[piv]; bb[piv] = tb;
+                }
+                double d = A[col, col];
+                for (int k = col; k < n; k++) A[col, k] /= d;
+                bb[col] /= d;
+                for (int r = 0; r < n; r++)
+                {
+                    if (r == col) continue;
+                    double f = A[r, col];
+                    if (f == 0) continue;
+                    for (int k = col; k < n; k++) A[r, k] -= f * A[col, k];
+                    bb[r] -= f * bb[col];
+                }
+            }
+            for (int i = 0; i < n; i++) x[i] = bb[i];
+            return true;
+        }
+
+        /// <summary>
+        /// 「拟合底盘圆心」按钮：用正确法（线性最小二乘）和朴素法（边缘点圆拟合）对比，
+        /// 并显示与真实底盘圆心的误差。
+        /// </summary>
+        private void btnFitChassis_Click(object sender, EventArgs e)
+        {
+            if (_samples.Count < 8)
+            {
+                MessageBox.Show("样本点不足（需至少 8 个角度），请先点击「生成数据」运行一轮。",
+                    "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // 线阵方向单位向量 d̂
+            double dx = _lineRight.X - _lineLeft.X;
+            double dy = _lineRight.Y - _lineLeft.Y;
+            double dl = Math.Sqrt(dx * dx + dy * dy);
+            double ux = dx / dl, uy = dy / dl;
+            double Rw = _waferR;
+
+            // 正确法：从边缘点扣除 Rw·d̂（符号由真实圆心确定）得到晶圆圆心轨迹 m_i
+            var data = new List<(double angle, PointF m)>();
+            for (int i = 0; i < _samples.Count; i++)
+            {
+                var s = _samples[i];
+                double ex = s.Edge.X - s.Center.X;
+                double ey = s.Edge.Y - s.Center.Y;
+                int sign = (ex * ux + ey * uy) >= 0 ? 1 : -1;
+                PointF m = new PointF(
+                    (float)(s.Edge.X - sign * Rw * ux),
+                    (float)(s.Edge.Y - sign * Rw * uy));
+                data.Add((s.Angle, m));
+            }
+
+            bool okFit = FitChassisCenter(data, out double Ox, out double Oy, out double ecc, out double radFit);
+            bool okKasa = FitCircleKasa(_samples.Select(s => s.Edge).ToList(), out double nOx, out double nOy, out double nR);
+
+            double trueOx = _rotCenterX, trueOy = _rotCenterY;
+            double errFit = okFit ? Math.Sqrt((Ox - trueOx) * (Ox - trueOx) + (Oy - trueOy) * (Oy - trueOy)) : double.NaN;
+            double errKasa = okKasa ? Math.Sqrt((nOx - trueOx) * (nOx - trueOx) + (nOy - trueOy) * (nOy - trueOy)) : double.NaN;
+
+            lblFitResult.Text = okFit
+                ? $"正确法 O=({Ox:F2},{Oy:F2}) 误差{errFit:F2}px | 朴素法 O=({nOx:F2},{nOy:F2}) 误差{errKasa:F2}px | e={ecc:F2}"
+                : "拟合失败（样本不足或病态）";
+
+            lstLog.Items.Add("====== 底盘圆心拟合 ======");
+            lstLog.Items.Add($"真实底盘圆心=({trueOx:F2},{trueOy:F2})");
+            lstLog.Items.Add($"正确法(线性LS): O=({Ox:F2},{Oy:F2}) 偏心e={ecc:F2} 误差={errFit:F2}px");
+            lstLog.Items.Add($"朴素法(边缘点圆拟合): O=({nOx:F2},{nOy:F2}) 半径={nR:F2} 误差={errKasa:F2}px");
+            lstLog.Items.Add("说明：朴素法圆心=真实O±Rw·d̂，系统性偏移约Rw；正确法扣除Rw·d̂后线性拟合，误差极小。");
+        }
+
+        #endregion 【底盘圆心拟合】
 
         //可选：添加一个按钮控制标尺显示/隐藏
         private void btnToggleRuler_Click(object sender, EventArgs e)
